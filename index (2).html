@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Signal Console — NYC Room-Type Classifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="grid-overlay" aria-hidden="true"></div>
+
+<div class="wrap">
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div class="header-line" aria-hidden="true"></div>
+    <p class="eyebrow"><span class="eyebrow-dot"></span>NYC AIRBNB &middot; INFERENCE TERMINAL</p>
+    <h1 class="title">Signal&nbsp;Console</h1>
+    <p class="subtitle">Feed a listing's stats in. The model reads the platform and calls the room type.</p>
+  </header>
+
+  <!-- ===== MAIN GRID ===== -->
+  <main class="console">
+
+    <!-- ---------- LEFT: MANIFEST FORM ---------- -->
+    <section class="panel manifest" aria-label="Listing manifest">
+      <div class="panel-head">
+        <span class="panel-index">01</span>
+        <h2>Listing Manifest</h2>
+      </div>
+
+      <form id="predict-form" novalidate>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="latitude">Latitude</label>
+            <input type="number" id="latitude" name="latitude" step="0.000001" min="-90" max="90" placeholder="40.712800" required>
+          </div>
+          <div class="field">
+            <label for="longitude">Longitude</label>
+            <input type="number" id="longitude" name="longitude" step="0.000001" min="-180" max="180" placeholder="-74.006000" required>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="neighbourhood_group">Borough</label>
+            <select id="neighbourhood_group" name="neighbourhood_group" required>
+              <option value="" disabled selected>Select borough</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="neighbourhood">Neighbourhood</label>
+            <input list="neighbourhood-list" id="neighbourhood" name="neighbourhood" placeholder="Start typing…" autocomplete="off" required>
+            <datalist id="neighbourhood-list"></datalist>
+          </div>
+        </div>
+
+        <!-- borough schematic -->
+        <div class="borough-map" aria-hidden="true">
+          <svg viewBox="0 0 320 190" id="borough-svg">
+            <path class="ferry-line" d="M60,150 L110,110" />
+            <g class="node" data-borough="Bronx">
+              <circle cx="150" cy="24" r="7"></circle>
+              <text x="150" y="10">BRONX</text>
+            </g>
+            <g class="node" data-borough="Manhattan">
+              <circle cx="150" cy="80" r="7"></circle>
+              <text x="150" y="66">MANHATTAN</text>
+            </g>
+            <g class="node" data-borough="Queens">
+              <circle cx="240" cy="95" r="7"></circle>
+              <text x="240" y="81">QUEENS</text>
+            </g>
+            <g class="node" data-borough="Brooklyn">
+              <circle cx="180" cy="150" r="7"></circle>
+              <text x="180" y="172">BROOKLYN</text>
+            </g>
+            <g class="node" data-borough="Staten Island">
+              <circle cx="60" cy="150" r="7"></circle>
+              <text x="60" y="172">STATEN IS.</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="price">Price <span class="unit">/ night, $</span></label>
+            <input type="number" id="price" name="price" min="1" step="1" placeholder="150" required>
+          </div>
+          <div class="field">
+            <label for="minimum_nights">Minimum Nights</label>
+            <input type="number" id="minimum_nights" name="minimum_nights" min="1" max="365" step="1" placeholder="3" required>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="number_of_reviews">Total Reviews</label>
+            <input type="number" id="number_of_reviews" name="number_of_reviews" min="0" step="1" placeholder="24" required>
+          </div>
+          <div class="field">
+            <label for="reviews_per_month">Reviews / Month</label>
+            <input type="number" id="reviews_per_month" name="reviews_per_month" min="0" step="0.01" placeholder="1.20" required>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="calculated_host_listings_count">Host's Listings</label>
+            <input type="number" id="calculated_host_listings_count" name="calculated_host_listings_count" min="0" step="1" placeholder="1" required>
+          </div>
+          <div class="field">
+            <label for="availability_365">Availability <span class="unit">/ 365 days</span></label>
+            <input type="number" id="availability_365" name="availability_365" min="0" max="365" step="1" placeholder="180" required>
+          </div>
+        </div>
+
+        <details class="advanced">
+          <summary>Terminal settings</summary>
+          <div class="field">
+            <label for="api-base">API base URL</label>
+            <input type="text" id="api-base" name="api-base" value="http://127.0.0.1:8000" autocomplete="off">
+          </div>
+        </details>
+
+        <button type="submit" class="run-btn" id="run-btn">
+          <span class="run-btn-label">Run Prediction</span>
+          <span class="run-btn-spinner" aria-hidden="true"></span>
+        </button>
+        <p class="form-error" id="form-error" role="alert"></p>
+      </form>
+    </section>
+
+    <!-- ---------- RIGHT: PREDICTION CONSOLE ---------- -->
+    <section class="panel readout" aria-label="Prediction readout">
+      <div class="panel-head">
+        <span class="panel-index">02</span>
+        <h2>Model Readout</h2>
+        <span class="status-chip" id="status-chip">IDLE</span>
+      </div>
+
+      <div class="tracks" id="tracks">
+        <!-- Track template x3, filled/animated via JS -->
+        <div class="track" data-class="Entire home/apt">
+          <div class="track-top">
+            <span class="track-label">Entire home/apt</span>
+            <span class="track-pct" data-pct>0%</span>
+          </div>
+          <div class="track-rail">
+            <div class="track-fill" data-fill></div>
+            <div class="track-terminal" data-terminal></div>
+          </div>
+        </div>
+        <div class="track" data-class="Private room">
+          <div class="track-top">
+            <span class="track-label">Private room</span>
+            <span class="track-pct" data-pct>0%</span>
+          </div>
+          <div class="track-rail">
+            <div class="track-fill" data-fill></div>
+            <div class="track-terminal" data-terminal></div>
+          </div>
+        </div>
+        <div class="track" data-class="Shared room">
+          <div class="track-top">
+            <span class="track-label">Shared room</span>
+            <span class="track-pct" data-pct>0%</span>
+          </div>
+          <div class="track-rail">
+            <div class="track-fill" data-fill></div>
+            <div class="track-terminal" data-terminal></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="verdict" id="verdict">
+        <span class="verdict-eyebrow">CALLED</span>
+        <span class="verdict-value" id="verdict-value">—</span>
+      </div>
+
+      <div class="raw-toggle-row">
+        <button type="button" class="raw-toggle" id="raw-toggle">View raw response</button>
+      </div>
+      <pre class="raw-json" id="raw-json" hidden></pre>
+
+      <div class="empty-state" id="empty-state">
+        <p>No signal yet.</p>
+        <p class="empty-sub">Fill the manifest on the left and run a prediction — the tracks above will light up with the model's confidence for each room type.</p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>Random Forest classifier &middot; scikit-learn pipeline &middot; served over FastAPI</p>
+  </footer>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
